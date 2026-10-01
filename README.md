@@ -85,3 +85,9 @@ cd frontend && npm install && npm run dev     # frontend on :5173 (needs the API
 ```
 
 Specs and plan live in `specs/001-binder-hit-rate-dashboard/`.
+
+The README screenshot isn't hand-captured: the **Update dashboard screenshot** GitHub Actions
+workflow (`.github/workflows/update-screenshot.yml`, manual trigger) builds the stack, downloads
+the same pinned snapshot, ingests it, and screenshots the live dashboard with Playwright
+(`scripts/screenshot.mjs`), then commits `docs/screenshot.jpg` if it changed. Run it from the
+Actions tab after a UI change.

@@ -1,0 +1,78 @@
+name: Update dashboard screenshot
+
+# Manual only: this starts the full stack, downloads the public Proteinbase snapshot, ingests it,
+# and screenshots the live dashboard into docs/screenshot.jpg. Run it after a UI change that should
+# be reflected in the README. Not on every push — a screenshot commit on every push would be noise.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  SNAPSHOT_URL: https://storage.proteinbase.com/proteinbase_all_data_28_01_2026.csv
+  SNAPSHOT_FILE: proteinbase_all_data_28_01_2026.csv
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env
+        run: echo "POSTGRES_PASSWORD=ci-$(openssl rand -hex 8)" > .env
+
+      - name: Download the Proteinbase snapshot
+        run: |
+          mkdir -p data
+          curl -sSL --fail -o "data/${SNAPSHOT_FILE}" "$SNAPSHOT_URL"
+
+      - name: Build and start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the backend
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/meta > /dev/null && exit 0
+            sleep 2
+          done
+          echo "backend did not become ready in time" >&2
+          docker compose logs backend
+          exit 1
+
+      - name: Ingest the snapshot
+        run: docker compose run --rm backend python -m src.ingest "/data/${SNAPSHOT_FILE}"
+
+      - name: Wait for the frontend
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173 > /dev/null && exit 0
+            sleep 2
+          done
+          echo "frontend did not become ready in time" >&2
+          docker compose logs frontend
+          exit 1
+
+      - name: Install Playwright
+        run: |
+          npm install -g playwright@1.48.0
+          npx playwright install --with-deps chromium
+
+      - name: Capture the screenshot
+        run: node scripts/screenshot.mjs
+
+      - name: Show stack logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+      - name: Commit the screenshot if it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshot.jpg
+          git diff --cached --quiet || git commit -m "Update dashboard screenshot [skip ci]"
+          git diff --cached --quiet && echo "No change in screenshot." || git push
