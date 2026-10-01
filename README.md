@@ -63,12 +63,6 @@ data is loaded.
 The frontend container runs the Vite server, which proxies `/api` to the backend. For a public
 deployment put a production build and a reverse proxy in front instead.
 
-Every push to `main` also publishes both images to GHCR
-([backend](https://github.com/domisko/proteinbase-data/pkgs/container/proteinbase-data-backend),
-[frontend](https://github.com/domisko/proteinbase-data/pkgs/container/proteinbase-data-frontend)),
-so `docker compose build` above can be swapped for `docker compose pull` once pulling the prebuilt
-images, or they can be pulled directly: `docker pull ghcr.io/domisko/proteinbase-data-backend:latest`.
-
 ## How numbers are defined
 
 - **Binder** = the dataset's own boolean `binding` result for that design and target. Repeated

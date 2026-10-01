@@ -1,8 +1,8 @@
 name: CI
 
 # Builds both Docker images and runs tests/lint on every push and PR, so a broken build or a
-# failing test is caught before it reaches main. On push to main only (never on PRs — forks don't
-# get a package-write token), the built images are also published to GHCR; see the `publish` job.
+# failing test is caught before it reaches main. No registry push — this is a demo project, so
+# anyone running it builds the images themselves from the Dockerfiles via `docker compose up`.
 on:
   push:
     branches: [main]
@@ -92,37 +92,3 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: [docker-build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        service: [backend, frontend]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/proteinbase-data-${{ matrix.service }}
-          tags: |
-            type=sha,format=short
-            type=raw,value=latest
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: ./${{ matrix.service }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
