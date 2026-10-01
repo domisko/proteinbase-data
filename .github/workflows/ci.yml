@@ -1,0 +1,93 @@
+name: CI
+
+# Builds both Docker images and runs tests/lint on every push and PR, so a broken build or a
+# failing test is caught before it reaches main. No registry push — nothing here needs publishing.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: Tests
+        working-directory: backend
+        run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint (eslint)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build (tsc + vite)
+        working-directory: frontend
+        run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env
+        run: echo "POSTGRES_PASSWORD=ci-$(openssl rand -hex 8)" > .env
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the backend
+        # /meta returns 503 until data is ingested, so it can't be used as the readiness probe —
+        # /openapi.json is served as soon as the app is up, regardless of data state.
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/openapi.json > /dev/null && exit 0
+            sleep 2
+          done
+          echo "backend did not become ready in time" >&2
+          docker compose logs backend
+          exit 1
+
+      - name: Ingest the test fixture
+        run: docker compose run --rm -v "$PWD/backend/tests/fixtures:/fixtures:ro" backend python -m src.ingest /fixtures/sample.csv
+
+      - name: Smoke-test the API
+        run: |
+          curl -sf http://localhost:8000/meta
+          curl -sf http://localhost:8000/targets
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

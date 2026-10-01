@@ -31,9 +31,11 @@ jobs:
         run: docker compose up -d --build
 
       - name: Wait for the backend
+        # /meta returns 503 until data is ingested, so it can't be used as the readiness probe —
+        # /openapi.json is served as soon as the app is up, regardless of data state.
         run: |
           for i in $(seq 1 30); do
-            curl -sf http://localhost:8000/meta > /dev/null && exit 0
+            curl -sf http://localhost:8000/openapi.json > /dev/null && exit 0
             sleep 2
           done
           echo "backend did not become ready in time" >&2
