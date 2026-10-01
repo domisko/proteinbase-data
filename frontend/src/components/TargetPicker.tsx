@@ -1,4 +1,5 @@
 import type { Target } from '../services/api';
+import { formatTargetLabel } from '../format';
 
 interface Props {
   targets: Target[];
@@ -13,7 +14,7 @@ export default function TargetPicker({ targets, value, onChange }: Props) {
       <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
         {targets.map((t) => (
           <option key={t.slug} value={t.slug}>
-            {t.name} ({t.designs} designs)
+            {formatTargetLabel(t.name)} ({t.designs} designs)
           </option>
         ))}
       </select>

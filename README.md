@@ -8,11 +8,17 @@ non-binders.
 
 ![Binder hit rate by design method, Nipah glycoprotein G](docs/screenshot.jpg)
 
-<!--
-  TODO (you, not me): replace this paragraph with your own couple of sentences — why you built
-  this, what you were curious about, what surprised you in the data. I drafted the rest of this
-  README factually, but this part should be in your own words before you link it anywhere.
--->
+I'm a full-stack engineer, not a biologist — I'd barely looked at a protein sequence before this.
+What got me into Proteinbase was simpler: there's a public dataset of thousands of AI-designed
+proteins with real lab results attached, and I wanted to see if I could pull a straight answer out
+of it — which design methods actually produce binders, and whether any of the computational scores
+predict that before you ever run the experiment. The thing that caught me off guard was the
+ESMFold data: most designs had two different confidence scores recorded for the exact same
+sequence, a few points apart, and nothing in the data said why. I ended up writing a rule for it
+instead of ignoring it. I also didn't expect how lopsided the testing was — a handful of methods
+account for most of the results, and a lot of "100% hit rate" methods turned out to be two or three
+designs. That's mostly why the dashboard flags small samples instead of just sorting by the highest
+number.
 
 Designs with no method label are shown as **unlabelled** rather than dropped, and methods tested
 on fewer than 20 designs are flagged and sorted separately — most of Proteinbase's 2,630 binding

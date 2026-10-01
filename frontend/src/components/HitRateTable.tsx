@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react';
 import type { HitRate } from '../services/api';
+import { formatMethodName } from '../format';
 
 const COLLAPSED_ROWS = 15;
 
@@ -35,7 +36,7 @@ export default function HitRateTable({ rows }: { rows: HitRate[] }) {
                 )}
                 <tr className={r.method === 'unlabelled' ? 'muted-row' : undefined}>
                   <td className="method">
-                    {r.method}
+                    <span title={r.method}>{formatMethodName(r.method)}</span>
                     {r.small_sample && (
                       <span className="badge" title="Fewer than 20 designs with a clear result">
                         small sample

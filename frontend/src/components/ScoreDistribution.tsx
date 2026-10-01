@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { api, type Distribution, type ScoreInfo } from '../services/api';
+import { formatScoreLabel } from '../format';
 
 interface Props {
   target: string;
@@ -58,7 +59,7 @@ export default function ScoreDistribution({ target, scores, score, onScoreChange
         <select value={score ?? ''} onChange={(e) => onScoreChange(e.target.value)}>
           {scores.map((s) => (
             <option key={s.name} value={s.name}>
-              {s.name} ({s.designs_with_value} designs)
+              {formatScoreLabel(s.name)} ({s.designs_with_value} designs)
             </option>
           ))}
         </select>
