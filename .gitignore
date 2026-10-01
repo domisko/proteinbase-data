@@ -1,0 +1,27 @@
+# Raw data is never committed (see README)
+data/
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Misc
+.env
+.env.*
+.DS_Store
+*.log
+
+# Tiny hand-made test fixtures are allowed
+!backend/tests/fixtures/*.csv
+
+# Template for local secrets is allowed
+!.env.example

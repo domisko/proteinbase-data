@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: Proteinbase Hit-Rate API
+  version: 1.0.0
+  description: Read-only public API. No authentication. Data credit Adaptyv Bio and Proteinbase, ODC-By.
+paths:
+  /meta:
+    get:
+      summary: Snapshot and attribution info
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meta" }
+  /targets:
+    get:
+      summary: Targets with design counts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Target" }
+  /targets/{target}/hit-rates:
+    get:
+      summary: Hit rate by design method for a target
+      parameters:
+        - { name: target, in: path, required: true, schema: { type: string }, description: 'Target slug, e.g. nipah-glycoprotein-g' }
+      responses:
+        "200":
+          description: Rows ordered by hit_rate descending, nulls last; includes an "unlabelled" method row when present
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HitRate" }
+        "404": { description: Unknown target }
+  /targets/{target}/scores:
+    get:
+      summary: Scores available for a target, with how many of its designs have each
+      parameters:
+        - { name: target, in: path, required: true, schema: { type: string }, description: 'Target slug, e.g. nipah-glycoprotein-g' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ScoreInfo" }
+        "404": { description: Unknown target }
+  /targets/{target}/scores/{score}/distribution:
+    get:
+      summary: Binder vs non-binder distribution of one score
+      parameters:
+        - { name: target, in: path, required: true, schema: { type: string }, description: 'Target slug, e.g. nipah-glycoprotein-g' }
+        - { name: score, in: path, required: true, schema: { type: string } }
+        - { name: bins, in: query, schema: { type: integer, default: 20, minimum: 2, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Distribution" }
+        "404": { description: Unknown target or score }
+components:
+  schemas:
+    Meta:
+      type: object
+      required: [snapshot_date, licence, credit]
+      properties:
+        snapshot_date: { type: string, format: date }
+        licence: { type: string, example: ODC-By }
+        credit: { type: string, example: "Adaptyv Bio, Proteinbase" }
+        source_file: { type: string }
+    Target:
+      type: object
+      required: [slug, name, designs]
+      properties:
+        slug: { type: string }
+        name: { type: string, description: Friendly label for main targets, else the slug }
+        designs: { type: integer }
+    HitRate:
+      type: object
+      required: [method, binders, non_binders, no_result, labelled, small_sample]
+      properties:
+        method: { type: string, description: 'Design method or "unlabelled"' }
+        binders: { type: integer }
+        non_binders: { type: integer }
+        no_result: { type: integer }
+        labelled: { type: integer, description: binders + non_binders }
+        hit_rate: { type: number, nullable: true, description: binders / labelled; null if labelled = 0 }
+        small_sample: { type: boolean, description: True when labelled is below 20 }
+    Distribution:
+      type: object
+      required: [score, bin_edges, binder, non_binder, missing_count, conflicting_excluded, no_result_excluded]
+      properties:
+        score: { type: string }
+        bin_edges: { type: array, items: { type: number }, description: Shared by both groups }
+        binder: { $ref: "#/components/schemas/Group" }
+        non_binder: { $ref: "#/components/schemas/Group" }
+        missing_count: { type: integer, description: Binder / non-binder designs of the target with no value for this score }
+        conflicting_excluded: { type: integer, description: Binder / non-binder designs whose source records several different values for this score, left out of both groups }
+        no_result_excluded: { type: integer, description: Designs of the target with outcome no_result, excluded from both groups }
+    ScoreInfo:
+      type: object
+      required: [name, designs_with_value]
+      properties:
+        name: { type: string }
+        designs_with_value: { type: integer }
+    Group:
+      type: object
+      required: [n, counts]
+      properties:
+        n: { type: integer }
+        counts: { type: array, items: { type: integer } }
